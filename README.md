@@ -12,7 +12,7 @@ A C++ Client library for the [Apollo](https://github.com/apolloconfig/apollo) co
 - Support for Apollo gray release by label
 - Thread-safe access to configuration values
 
-## TO DO Features
+## TODO Features
 - Implement HTTPS support.
 
 ## Prerequisites
@@ -47,5 +47,5 @@ cmake --build . --target docs
 
 # 💡 Tips
 - [boost usage](./docs/boost_usage.md) provides detailed instructions on how to use Boost libraries with this project.
-- [nlohmann_json usage](./docs/nlohmann_json.md) provides detailed instructions on how to use nlohmann_json with this project.
+- [nlohmann_json](./docs/nlohmann_json_usage.md) provides detailed instructions on how to use nlohmann_json with this project.
 - [doctest usage](./docs/doctest_usage.md) provides detailed instructions on how to use doctest for unit testing in this project.

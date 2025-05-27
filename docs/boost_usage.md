@@ -1,7 +1,7 @@
 # Boost Usage
 Boost `b2` installation not support cmake target model.<br>
-if your Boost is built with `cmake`, you can use `target_link_libraries(${TARGET} PRIVATE Boost::url Boost::asio)` to link boost libraries.<br>
-if your Boost is built with `b2`, you should set `include_directories(${Boost_INCLUDE_DIRS}) and link_directories(${Boost_LIBRARY_DIRS})`to the include and lib directories of your boost installation.<br>
+- If Boost is built with `cmake`, you can use `target_link_libraries(${TARGET} PRIVATE Boost::url Boost::asio)` to link boost libraries.
+- If Boost is built with `b2`, you can use `include_directories(${Boost_INCLUDE_DIRS}) and link_directories(${Boost_LIBRARY_DIRS})` to set boost installation.
 
 ## Boost `cmake` installation:
 ```bash
