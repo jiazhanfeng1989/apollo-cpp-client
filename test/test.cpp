@@ -111,10 +111,23 @@ TEST_CASE("notifications-from-json")
     CHECK(notifications[1].notification_id_ == 2);
 }
 
+TEST_CASE("releaseKey-configures-from-json")
+{
+    std::string json = R"({"appId":"100004458","cluster":"default","namespaceName":"application","configurations":{"portal.elastic.document.type":"biz","portal.elastic.cluster.name":"hermes-es-fws"},"releaseKey":"20170430092936-dee2d58e74515ff3"})";
+    std::string release_key;
+    Configures configures;
+    bool success = fromJsonString(json, release_key, configures);
+    CHECK(success);
+    CHECK(release_key == "20170430092936-dee2d58e74515ff3");
+    CHECK(configures.size() == 2);
+    CHECK(configures["portal.elastic.document.type"] == "biz");
+    CHECK(configures["portal.elastic.cluster.name"] == "hermes-es-fws");
+}
+
 TEST_CASE("create-notifications-v2-url")
 {
     NamespaceAttributesMap namespace_attributes =
-        {{"test_namespace1", std::make_shared<NamespaceAttributes>("test_release_key1", -1)},
+        {{"test_namespace1", std::make_shared<NamespaceAttributes>("test_release_key1", 12)},
          {"test_namespace2", std::make_shared<NamespaceAttributes>("", -1)}};
 
     std::string apollo_url = "http://apollo-server.com";
@@ -122,7 +135,84 @@ TEST_CASE("create-notifications-v2-url")
     std::string label = "test_label";
     std::string app_id = "test_app";
 
-    auto url = createNotificationsV2URL(app_id, apollo_url, cluster_name, label, namespace_attributes);
-    auto expected_url = R"(http://apollo-configservice-na.stg.k8s.mypna.com/notifications/v2?appId=NAVConfig&cluster=EU&notifications=%5B%7B%22namespaceName%22:%22direction%22,%22notificationId%22:-1%7D,%7B%22namespaceName%22:%22evplanner%22,%22notificationId%22:-1%7D%5D)";
+    std::string url = createNotificationsV2URL(app_id, apollo_url, cluster_name, label, namespace_attributes);
+    std::string expected_url(R"(http://apollo-server.com/notifications/v2?appId=test_app&cluster=default&notifications=%255B%257B%2522namespaceName%2522%253A%2522test_namespace1%2522%252C%2522notificationId%2522%253A12%257D%252C%257B%2522namespaceName%2522%253A%2522test_namespace2%2522%252C%2522notificationId%2522%253A-1%257D%255D&label=test_label)");
     CHECK(url == expected_url);
+}
+
+TEST_CASE("create-no-cache-configs-url")
+{
+    std::string apollo_url = "http://apollo-server.com";
+    std::string cluster_name = "default";
+    std::string label = "test_label";
+    std::string app_id = "test_app";
+
+    std::string url1 =
+        createNoCacheConfigsURL(app_id, apollo_url, cluster_name, "test_namespace1", label, "test_release_key1", 12);
+    std::string expected_url1 =
+        R"(http://apollo-server.com/configs/test_app/default/test_namespace1?label=test_label&releaseKey=test_release_key1&messages=%257B%2522details%2522%253A%257B%2522test_app%252Bdefault%252Btest_namespace1%2522%253A12%257D%257D)";
+    CHECK(url1 == expected_url1);
+
+    std::string url2 =
+        createNoCacheConfigsURL(app_id, apollo_url, cluster_name, "test_namespace2", label, "", -1);
+    std::string expected_url2 =
+        R"(http://apollo-server.com/configs/test_app/default/test_namespace2?label=test_label)";
+    CHECK(url2 == expected_url2);
+}
+
+TEST_CASE("create-no-cache-configs-messages")
+{
+    std::string app_id = "app";
+    std::string cluster_name = "default";
+    NamespaceType s_namespace = "test";
+    int notification_id = 11;
+
+    std::string message = createNoCacheConfigsMessages(app_id, cluster_name, s_namespace, notification_id);
+    std::string expected_message(R"({"details":{"app+default+test":11}})");
+    CHECK(message == expected_message);
+}
+
+TEST_CASE("logger")
+{
+    // Create a mock logger
+    class MockLogger : public ILogger
+    {
+    public:
+        MockLogger() = default;
+        ~MockLogger() override = default;
+        LogLevel getLogLevel() const override
+        {
+            return log_level_;
+        }
+        void setLogLevel(LogLevel level) override
+        {
+            log_level_ = level;
+        }
+        void log(LogLevel level, const std::string& message) override
+        {
+            std::cout << message << std::endl;
+            log_messages_.emplace_back(message);
+        }
+
+        const std::vector<std::string>& getLogMessages() const
+        {
+            return log_messages_;
+        }
+
+    private:
+        LogLevel log_level_ = LogLevel::Debug;
+        std::vector<std::string> log_messages_;
+    };
+
+    auto logger = std::make_shared<MockLogger>();
+    logger->setLogLevel(LogLevel::Warning);  // Set log level to Warning for testing
+
+    LOG_ERROR(logger, "This is an error message");
+    LOG_WARN(logger, "This is a warning message");
+    LOG_INFO(logger, "This is an info message");
+    LOG_DEBUG(logger, "This is a debug message");
+
+    CHECK(logger->getLogMessages().size() == 2);  // Only Warning and Error should be logged
+    CHECK(logger->getLogMessages()[0] == "This is an error message");
+    CHECK(logger->getLogMessages()[1] == "This is a warning message");
 }

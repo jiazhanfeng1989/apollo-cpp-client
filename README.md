@@ -1,8 +1,5 @@
 # Apollo C++ Client
 
-![status](https://img.shields.io/badge/status-WIP-orange)
-> ⚠️ **This library is under development. Do not use it in production.**
-
 # Overview
 A C++ Client library for the [Apollo](https://github.com/apolloconfig/apollo) configuration center.
 

@@ -50,10 +50,10 @@ public:
         return configures_;
     }
 
-    inline void SetReleaseKey(const std::string& release_key)
+    inline void SetReleaseKey(std::string&& release_key)
     {
         std::unique_lock<std::mutex> lock(release_key_mutex_);
-        release_key_ = release_key;
+        release_key_ = std::move(release_key);
     }
 
     inline int GetNotificationId() const
@@ -78,7 +78,7 @@ private:
 };
 
 using NamespaceAttributesPtr = std::shared_ptr<NamespaceAttributes>;
-using NamespaceAttributesMap = std::map<NAMESPACE_TYPE, NamespaceAttributesPtr>;
+using NamespaceAttributesMap = std::map<NamespaceType, NamespaceAttributesPtr>;
 
 }  // namespace client
 }  // namespace apollo
