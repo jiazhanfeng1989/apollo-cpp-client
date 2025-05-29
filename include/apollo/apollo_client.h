@@ -94,8 +94,7 @@ public:
 /**
  * @brief Creates a new Apollo client instance
  *
- * Factory function to create and configure an Apollo client. This is the recommended
- * way to instantiate an ApolloClient.
+ * The method will connect to the Apollo server and load configurations for initialization when created.
  *
  * @param apollo_url Apollo server URL (e.g., "http://apollo-service:8080" or "http://apollo-server.com")
  * @param app_id Application ID registered in Apollo Configuration Center
