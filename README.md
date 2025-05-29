@@ -112,6 +112,9 @@ auto configures = client->getConfigures("config1");
 client->stopLongPolling(); // Stop the long polling thread.
 ```
 
+# API Documentation
+[API Documentation](https://jiazhanfeng1989.github.io/apollo-cpp-client/)
+
 # 💡 Tips
 - [boost usage](./docs/boost_usage.md) provides detailed instructions on how to use Boost libraries with this project.
 - [nlohmann_json](./docs/nlohmann_json_usage.md) provides detailed instructions on how to use nlohmann_json with this project.
