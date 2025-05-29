@@ -106,6 +106,10 @@ catch (const std::exception& e)
 // If long polling has not been started, this will return only the initial configuration loaded at ApolloClient creation.
 // no exception is thrown.
 auto configures = client->getConfigures("config1");
+...
+...
+...
+client->stopLongPolling(); // Stop the long polling thread.
 ```
 
 # 💡 Tips
