@@ -5,6 +5,7 @@
  */
 
 #pragma once
+#include <functional>
 #include "apollo_types.h"
 
 namespace apollo

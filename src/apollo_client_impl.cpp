@@ -54,7 +54,7 @@ void ApolloClientImpl::startLongPolling(int long_polling_interval_ms)
 
         long_polling_thread_ =
             std::thread([shared_this = shared_from_this()]() { shared_this->io_context_.run(); });
-        LOG_INFO(logger_, "Starting long polling with interval: " + std::to_string(long_polling_interval_ms) + " ms");
+        LOG_INFO(logger_, "apollo client starting long polling with interval: " + std::to_string(long_polling_interval_ms) + " ms");
     }
 
     return;
@@ -70,6 +70,7 @@ void ApolloClientImpl::stopLongPolling()
             io_context_.stop();
             long_polling_thread_.join();
         }
+        LOG_INFO(logger_, "apollo client stopped long polling");
     }
     return;
 }
@@ -94,11 +95,6 @@ void ApolloClientImpl::initNamespaceAttributes()
 {
     for (const auto& ns : opts_.namespaces_)
     {
-        if (ns == "")
-        {
-            throw std::invalid_argument("Namespace cannot be empty in opts.namespaces_");
-        }
-
         namespace_attributes_.emplace(ns, std::make_shared<NamespaceAttributes>());
     }
 }
@@ -116,16 +112,17 @@ void ApolloClientImpl::initConfigurationsMap()
                                            p.second->GetReleaseKey(),
                                            p.second->GetNotificationId());
 
-        LOG_INFO(logger_, "get configurations from Apollo, namespace: " + p.first + ", url: " + url);
+        LOG_DEBUG(logger_, "apollo client get configurations from Apollo, namespace: " + p.first + ", url: " + url);
         auto res = http_client_.get(url);
         if (res.second)
         {
-            throw std::runtime_error("Failed to fetch configurations from Apollo: " + res.second.message());
+            throw std::runtime_error("apollo client failed to fetch configurations from Apollo: " +
+                                     res.second.message());
         }
 
         if (res.first.result() != http::status::ok)
         {
-            throw std::runtime_error("Failed to fetch configurations from Apollo, status: " +
+            throw std::runtime_error("apollo client failed to fetch configurations from Apollo, status: " +
                                      std::to_string(res.first.result_int()));
         }
 
@@ -134,11 +131,11 @@ void ApolloClientImpl::initConfigurationsMap()
 
         if (!fromJsonString(res.first.body(), release_key, configures))
         {
-            throw std::runtime_error("Failed to parse configurations from Apollo response");
+            throw std::runtime_error("apollo client failed to parse configurations from Apollo response");
         }
         p.second->SetReleaseKey(std::move(release_key));
         p.second->SetConfigures(std::move(configures));
-        LOG_INFO(logger_, "get configurations from Apollo successfully, namespace:" + p.first);
+        LOG_INFO(logger_, "apollo client get configurations from Apollo successfully, namespace:" + p.first);
     }
 }
 
@@ -146,25 +143,25 @@ void ApolloClientImpl::initNotificationsIdMap()
 {
     assert(namespace_attributes_.size() > 0);
     auto url = createNotificationsV2URL(app_id_, apollo_url_, opts_.cluster_name_, opts_.label_, namespace_attributes_);
+    LOG_DEBUG(logger_, "apollo client init notifications map from Apollo url: " + url);
 
     auto res = http_client_.get(url);
-
-    LOG_INFO(logger_, "init notifications map from Apollo url: " + url);
     if (res.second)
     {
-        throw std::runtime_error("Failed to fetch notifications from Apollo: " + res.second.message());
+        throw std::runtime_error("apollo client failed to fetch notifications from Apollo: " +
+                                 res.second.message());
     }
 
     if (res.first.result() != http::status::ok)
     {
-        throw std::runtime_error("Failed to fetch notifications from Apollo, status: " +
+        throw std::runtime_error("apollo client failed to fetch notifications from Apollo, status: " +
                                  std::to_string(res.first.result_int()));
     }
 
     Notifications notifications;
     if (!fromJsonString(res.first.body(), notifications))
     {
-        throw std::runtime_error("Failed to parse notifications from Apollo response");
+        throw std::runtime_error("apollo client failed to parse notifications from Apollo response");
     }
 
     for (const auto& notification : notifications)
@@ -175,19 +172,21 @@ void ApolloClientImpl::initNotificationsIdMap()
         }
     }
 
-    LOG_INFO(logger_, "init notifications map from Apollo successfully");
+    LOG_INFO(logger_, "apollo client init notifications map from Apollo successfully");
 }
 
 void ApolloClientImpl::longPollingThreadFunc()
 {
     assert(namespace_attributes_.size() > 0);
     auto url = createNotificationsV2URL(app_id_, apollo_url_, opts_.cluster_name_, opts_.label_, namespace_attributes_);
-    LOG_DEBUG(logger_, "long polling url: " + url);
+    LOG_DEBUG(logger_, "apollo client long polling notification url: " + url);
 
     auto res = http_client_.get(url);
     if (res.second)
     {
-        LOG_WARN(logger_, "long polling failed, url: " + url + " message: " + res.second.message());
+        LOG_WARN(logger_,
+                 "apollo client long polling notification failed, url: " + url +
+                     " message: " + res.second.message());
         setupLongPollingTimer();
         return;
     }
@@ -201,7 +200,8 @@ void ApolloClientImpl::longPollingThreadFunc()
     if (res.first.result() != http::status::ok)
     {
         LOG_WARN(logger_,
-                 "long polling failed, url: " + url + " status: " + std::to_string(res.first.result_int()));
+                 "apollo client long polling notification failed, url: " + url +
+                     " status: " + std::to_string(res.first.result_int()));
         setupLongPollingTimer();
         return;
     }
@@ -209,7 +209,7 @@ void ApolloClientImpl::longPollingThreadFunc()
     Notifications notifications;
     if (!fromJsonString(res.first.body(), notifications))
     {
-        LOG_WARN(logger_, "long polling parse notifications failed, url: " + url);
+        LOG_WARN(logger_, "apollo client long polling notification parse failed, url: " + url);
         setupLongPollingTimer();
         return;
     }
@@ -229,10 +229,12 @@ void ApolloClientImpl::longPollingThreadFunc()
                                                     opts_.label_,
                                                     attribute_it->second->GetReleaseKey(),
                                                     notification.notification_id_);
+        LOG_DEBUG(logger_, "apollo client long polling configurations url: " + no_cache_url);
+
         auto no_cache_res = http_client_.get(no_cache_url);
         if (no_cache_res.second)
         {
-            LOG_WARN(logger_, "update configuration failed, url: " + no_cache_url);
+            LOG_WARN(logger_, "apollo client long polling configurations failed, url: " + no_cache_url);
             continue;
         }
 
@@ -246,7 +248,7 @@ void ApolloClientImpl::longPollingThreadFunc()
 
         if (!fromJsonString(no_cache_res.first.body(), new_release_key, new_configures))
         {
-            LOG_WARN(logger_, "parse configures failed, url: " + no_cache_url);
+            LOG_WARN(logger_, "apollo client long polling configurations parse failed, url: " + no_cache_url);
             continue;
         }
 
